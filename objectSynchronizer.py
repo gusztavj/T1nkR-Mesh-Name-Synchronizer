@@ -35,14 +35,14 @@ class T1nkerObjectSynchronizerAddonPreferences(AddonPreferences):
         layout = self.layout
         layout.label(text="Default settings")                
         layout.prop(self.settings, "prefix")        
-        layout.prop(self.settings, "suffix")        
+        layout.prop(self.settings, "suffix")
 
 
-# Main export operator class
+# Main operator class
 class T1NKER_OT_ObjectSynchronizer(Operator):    
-    """Export object compilations for Trainz"""
+    """Synchronize mesh (data block) names with object names"""
     bl_idname = "t1nker.objectsynchronizer"
-    bl_label = "Sync object names with meshes"
+    bl_label = "Sync object names with meshes (data blocks)"
     bl_options = {'REGISTER', 'UNDO'}    
     
     # Operator settings
@@ -61,7 +61,7 @@ class T1NKER_OT_ObjectSynchronizer(Operator):
     def draw(self, context):        
         layout = self.layout        
         layout.prop(self.settings, "prefix")
-        layout.prop(self.settings, "suffix")
+        layout.prop(self.settings, "suffix")        
         layout.prop(self.settings, "isTestOnly")  
 
     # Show the dialog ======================================================================================================
@@ -87,17 +87,19 @@ class T1NKER_OT_ObjectSynchronizer(Operator):
                 if a.type == 'OUTLINER':
                     return a.spaces.active
    
+    # Perform the synchronization ==========================================================================================
     def _performFindAndReplace(self, object):            
-        if object.data and object.data.users == 1:
-            synchedName = self.settings.prefix + object.name + self.settings.suffix
 
-            if object.name == synchedName:
-                print(f"* '{object.name}' is not affected")
-            else:
-                print(f"* '{object.name}' --> '{synchedName}'")
+        # Construct mesh name
+        meshName = self.settings.prefix + object.name + self.settings.suffix
 
-            if not self.settings.isTestOnly:
-                object.data.name = synchedName
+        if object.data.name == meshName:
+            print(f"- LEFT INTACT: Mesh of '{object.name}': '{object.data.name}'")
+        else:
+            print(f"+ RENAMED....: Mesh of '{object.name}': '{object.data.name}' --> '{meshName}'")
+
+        if not self.settings.isTestOnly:
+            object.data.name = meshName
 
         return object
 
@@ -105,12 +107,21 @@ class T1NKER_OT_ObjectSynchronizer(Operator):
     # Here is the core stuff ======================================================================================================
     def execute(self, context):              
         
+        print("---------- Hey, this is T1nk-R Object Name Synchronizer ----------")
+
         objects = [i for i in bpy.context.selected_ids if isinstance(i, bpy.types.Object)]
 
         for objectElement in objects:
             object: bpy.types.Object = objectElement
-            self._performFindAndReplace(object)   
-                                            
+
+            # Only process objects with data blocks (meshes), and ignore linked items
+            if object.data:
+                self._performFindAndReplace(object)   
+            else:
+                print(f"- IGNORED....: '{object.name}' is ignored, it has no associated data-block (mesh)")
+
+        print("---------- T1nk-R Object Name Synchronizer now exits ----------")
+
         return {'FINISHED'}
     
 
