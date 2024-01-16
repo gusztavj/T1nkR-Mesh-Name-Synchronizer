@@ -48,7 +48,7 @@ class T1NKER_OT_ObjectSynchronizer(Operator):
     # Operator settings
     settings : T1nkerObjectSynchronizerAddonSettings = None        
 
-    # Constructor =================================================================================================================
+    # Lifecycle management ========================================================================================================
     def __init__(self):
         self.settings = None
     
