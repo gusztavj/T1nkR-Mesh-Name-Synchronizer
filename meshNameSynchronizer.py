@@ -1,9 +1,10 @@
 
 from datetime import datetime
 import bpy
-import re
-from bpy.props import StringProperty, BoolProperty, EnumProperty, PointerProperty
+from . import updateChecker
+from bpy.props import StringProperty, BoolProperty, PointerProperty
 from bpy.types import Operator, AddonPreferences, PropertyGroup
+
 
 # Addon settings for add-on preferences ###########################################################################################
 class T1nkerMeshNameSynchronizerSettings(PropertyGroup):
@@ -55,9 +56,23 @@ class T1nkerMeshNameSynchronizerSettings(PropertyGroup):
     """
     Controls if actions are actually taken or just simulated.
     """
+    
+    everInitialized: BoolProperty(        
+        name="Already initialized", 
+        description="",
+        default=False
+    )    
+    """
+    This is not intended for the UI. This stores whether the add-on has been initialized for the scene or not, to get
+    default values set in add-on preferences.
+    """
+        
 
 # Addon preferences ###############################################################################################################
 class T1nkerMeshNameSynchronizerAddonPreferences(AddonPreferences):    
+    """
+    Preferences of the add-on.
+    """
     
     # Properties required by Blender ==============================================================================================
     bl_idname = __package__
@@ -67,9 +82,14 @@ class T1nkerMeshNameSynchronizerAddonPreferences(AddonPreferences):
     """
     
     # Other properties ============================================================================================================
-    settings : PointerProperty(type=T1nkerMeshNameSynchronizerSettings)
+    settings: PointerProperty(type=T1nkerMeshNameSynchronizerSettings)
     """
     The default settings stored at add-on level (insted of scene level).
+    """
+    
+    updateInfo: PointerProperty(type=updateChecker.T1nkerMeshNameSynchronizerUpdateInfo)
+    """
+    Information about the current version and the latest available
     """
     
     # Public functions ============================================================================================================
@@ -89,7 +109,29 @@ class T1nkerMeshNameSynchronizerAddonPreferences(AddonPreferences):
         layout.prop(self.settings, "suffix")
         
         # Log verbosity and test mode is intentionally not added
-
+                
+        # Update available button
+        #
+        
+        try: # to see if we know anything about updates
+            updateInfo = context.preferences.addons[__package__].preferences.updateInfo
+            
+            # Note that checking update is part of executing the main operator, that is, performing at least
+            # one synchronization. Until that no updates will be detected. Updates are not checked each time
+            # this dialog is drawn, but as set in `updateInfo.T1nkerMeshNameSynchronizerUpdateInfo.checkFrequencyDays`.
+            if updateInfo.updateAvailable:
+                # Draw update button and tip
+                opUpdate = layout.column().row().operator(
+                        'wm.url_open',
+                        text=f"Update available",
+                        icon='URL'
+                        )            
+                opUpdate.url = updateChecker.RepoInfo.repoReleasesUrl
+                layout.row().label(text=f"You can update from {updateInfo.currentVersion} to {updateInfo.latestVersion}")
+        except:
+            # Do nothing, if we could not check updates, probably this is the first time of enabling the add-on
+            # and corresponding data structures are not yet available.
+            pass
 
 # Main operator class #############################################################################################################
 class T1NKER_OT_MeshNameSynchronizer(Operator):    
@@ -121,9 +163,9 @@ class T1NKER_OT_MeshNameSynchronizer(Operator):
         """
         Copy of the operator settings specific to the Blender file (scene)
         """
-    
+            
     # Public functions ============================================================================================================
-    
+        
     # See if the operation can run ------------------------------------------------------------------------------------------------
     @classmethod
     def poll(cls, context):
@@ -136,7 +178,6 @@ class T1NKER_OT_MeshNameSynchronizer(Operator):
         Returns:
             bool: `True` if the operator can run, `False` otherwise.
         """
-        
         # No reason to not run it. If the user is not in the outliner, we'll try to get them there.
         
         return True
@@ -187,16 +228,44 @@ class T1NKER_OT_MeshNameSynchronizer(Operator):
         box.row().prop(self.settings, "isTestOnly")  
         box.row().prop(self.settings, "isVerbose")
         
-        
-        # Help
+        # Help and update buttons
         #
         box = layout.box()
-        op = self.layout.operator(
+        buttonRow = box.row()
+        
+        # Help button
+        #
+        
+        opHelp = buttonRow.column().row().operator(
             'wm.url_open',
             text='Help',
             icon='URL'
             )
-        op.url = 'www.google.com'
+        opHelp.url = updateChecker.RepoInfo.repoUrl       
+        
+        # Update available button
+        #
+        
+        try:
+            updateInfo = context.preferences.addons[__package__].preferences.updateInfo
+            
+            # Note that checking update is part of executing the main operator, that is, performing at least
+            # one synchronization. Until that no updates will be detected. Updates are not checked each time
+            # this dialog is drawn, but as set in `updateInfo.T1nkerMeshNameSynchronizerUpdateInfo.checkFrequencyDays`.
+            if updateInfo.updateAvailable:
+                # Update button            
+                opUpdate = buttonRow.column().row().operator(
+                        'wm.url_open',
+                        text=f"Update available",
+                        icon='URL'
+                        )            
+                opUpdate.url = updateChecker.RepoInfo.repoReleasesUrl
+                box.row().label(text=f"You can update from {updateInfo.currentVersion} to {updateInfo.latestVersion}")
+        except:
+            # Fail silently if we cannot check for updates or draw the UI
+            pass    
+        
+
 
     # Show the UI -----------------------------------------------------------------------------------------------------------------
     def invoke(self, context, event):                
@@ -214,12 +283,10 @@ class T1NKER_OT_MeshNameSynchronizer(Operator):
         self.settings = context.scene.T1nkerMeshNameSynchronizerSettings
         
         # For first run in the session, load default settings
-        # if self.settings is None:
-        #     self.settings: T1nkerMeshNameSynchronizerSettings()
-        #     self.settings.prefix = context.preferences.addons[__package__].preferences.settings.prefix
-        #     self.settings.suffix = context.preferences.addons[__package__].preferences.settings.suffix
-        #     self.settings.suffix.isTestOnly = False
-        #     self.settings.suffix.isVerbose = False
+        if not self.settings.everInitialized:
+            self.settings.prefix = context.preferences.addons[__package__].preferences.settings.prefix
+            self.settings.suffix = context.preferences.addons[__package__].preferences.settings.suffix
+            self.settings.everInitialized = True
             
  
         # Show dialog
@@ -239,6 +306,14 @@ class T1NKER_OT_MeshNameSynchronizer(Operator):
         Returns:
             {'FINISHED'} or {'ERROR'}, indicating success or failure of the operation.
         """
+        
+        # Call the update checker to check for updates time to time, as specified in 
+        # `updateInfo.T1nkerMeshNameSynchronizerUpdateInfo.checkFrequencyDays`
+        try:
+            bpy.ops.t1nker.meshnamesynchronizerupdatechecker()            
+        except:
+            # Don't mess up anything if update checking doesn't work, just ignore the error
+            pass
         
         operationStarted = f"{datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')}"
         
@@ -311,9 +386,9 @@ class T1NKER_OT_MeshNameSynchronizer(Operator):
             # Leave here instead of moving toward the end of the try block as some things might have been changed
             # even if an error occurred afterwards
             summary = \
-                f"No meshes have been renamed for a total of {numberOfObjects} objects" \
+                f"No mesh has been renamed for a total of {numberOfObjects} object(s)" \
                 if meshesRenamed == 0 else \
-                f"Renamed {meshesRenamed} meshes(s) for a total of {numberOfObjects} objects" \
+                f"Renamed {meshesRenamed} meshes(s) for a total of {numberOfObjects} object(s)" \
             
             self.report({'INFO'}, summary)
             

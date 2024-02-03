@@ -48,9 +48,9 @@
 # *********************************************************************************************************************************
 
 bl_info = {
-    "name": "T1nk-R Mesh Name Synchronizer",
-    "author": "GusJ",
-    "version": (1, 0),
+    "name": "T1nk-R Mesh Name Synchronizer (T1nk-R Utilitiesí)",
+    "author": "T1nk-R (GusJ)",
+    "version": (2, 1, 0),
     "blender": (3, 6, 0),
     "location": "Outliner > Context menu, Outliner > Context menu of objects and meshes",
     "description": "Synchronize mesh names with parent object names",
@@ -64,10 +64,12 @@ bl_info = {
 if "bpy" in locals():
     from importlib import reload
     reload(meshNameSynchronizer)
+    reload(updateChecker)
     del reload
 
 import bpy
 from . import meshNameSynchronizer
+from . import updateChecker
 
 # Properties ======================================================================================================================
 
@@ -77,9 +79,11 @@ Store keymaps here to access after registration.
 """
 
 classes = [
+    updateChecker.T1nkerMeshNameSynchronizerUpdateInfo,
+    updateChecker.T1NKER_OT_MeshNameSynchronizerUpdateChecker,
     meshNameSynchronizer.T1nkerMeshNameSynchronizerSettings, 
     meshNameSynchronizer.T1nkerMeshNameSynchronizerAddonPreferences, 
-    meshNameSynchronizer.T1NKER_OT_MeshNameSynchronizer
+    meshNameSynchronizer.T1NKER_OT_MeshNameSynchronizer    
 ]
 """
 List of classes requiring registration and unregistration.
@@ -93,6 +97,7 @@ menuLocations = [
 """
 Location to add the menu to.
 """
+
 
 # Public functions ================================================================================================================
 
@@ -123,8 +128,7 @@ def register():
     for c in classes:
         bpy.utils.register_class(c)
     
-    bpy.types.Scene.T1nkerMeshNameSynchronizerSettings = \
-        bpy.props.PointerProperty(type=meshNameSynchronizer.T1nkerMeshNameSynchronizerSettings)
+    bpy.types.Scene.T1nkerMeshNameSynchronizerSettings = bpy.props.PointerProperty(type=meshNameSynchronizer.T1nkerMeshNameSynchronizerSettings)
     
     # Add menus to locations specified above
     for location in menuLocations:
@@ -164,6 +168,8 @@ def unregister():
             km.keymap_items.remove(kmi)
             
         addon_keymaps.clear()
+        
+        del bpy.types.Scene.T1nkerMeshNameSynchronizerSettings
 
         # Unregister classes (in reverse order)
         for c in reversed(classes):
@@ -174,7 +180,6 @@ def unregister():
                 pass
         
         # Delete menu items
-        # Add menus to locations specified above
         for location in menuLocations:
             # Delete menu items in separate try blocks so if one fails others may still be attempted to be removed
             try:
