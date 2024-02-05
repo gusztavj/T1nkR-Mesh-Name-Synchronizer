@@ -39,7 +39,7 @@
 # DISCLAIMER **********************************************************************************************************************
 # This add-on is provided as-is. Use at your own risk. No warranties, no guarantee, no liability,
 # no matter what happens. Still I tried to make sure no weird things happen:
-#   * This add-on is intended to change the name of the meshes under your Blender objects.
+#   * This add-on is intended to change the name of the meshes and other data blocks under your Blender objects.
 #   * This add-on is not intended to modify your objects and other Blender assets in any other way.
 #   * You shall be able to simply undo consequences made by this add-on.
 #

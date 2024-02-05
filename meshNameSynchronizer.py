@@ -1,3 +1,51 @@
+# T1nk-R's Mesh Name Synchronizer add-on for Blender
+# - part of T1nk-R Utilities for Blender
+#
+# Version: Please see the version tag under bl_info in __init__.py.
+#
+# This module holds the key UI and business logic.
+#
+# Module and add-on authored by T1nk-R (https://github.com/gusztavj/)
+#
+# PURPOSE & USAGE *****************************************************************************************************************
+# You can use this add-on to synchronize the names of meshes with the names of their parent objects.
+#
+# Help, support, updates and anything else: https://github.com/gusztavj/T1nkR-Mesh-Name-Synchronizer
+#
+# COPYRIGHT ***********************************************************************************************************************
+#
+# ** MIT License **
+# 
+# Copyright (c) 2023-2024, T1nk-R (Gusztáv Jánvári)
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files
+# (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, 
+# merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is 
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE 
+# WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT 
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# 
+# ** Commercial Use **
+# 
+# I would highly appreciate to get notified via [janvari.gusztav@imprestige.biz](mailto:janvari.gusztav@imprestige.biz) about 
+# any such usage. I would be happy to learn this work is of your interest, and to discuss options for commercial support and 
+# other services you may need.
+#
+# DISCLAIMER **********************************************************************************************************************
+# This add-on is provided as-is. Use at your own risk. No warranties, no guarantee, no liability,
+# no matter what happens. Still I tried to make sure no weird things happen:
+#   * This add-on is intended to change the name of the meshes and other data blocks under your Blender objects.
+#   * This add-on is not intended to modify your objects and other Blender assets in any other way.
+#   * You shall be able to simply undo consequences made by this add-on.
+#
+# You may learn more about legal matters on page https://github.com/gusztavj/T1nkR-Mesh-Name-Synchronizer
+#
+# *********************************************************************************************************************************
 
 from datetime import datetime
 import bpy
