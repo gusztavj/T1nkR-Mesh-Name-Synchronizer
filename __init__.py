@@ -48,9 +48,9 @@
 # *********************************************************************************************************************************
 
 bl_info = {
-    "name": "T1nk-R Mesh Name Synchronizer (T1nk-R Utilitiesí)",
+    "name": "T1nk-R Mesh Name Synchronizer (T1nk-R Utilities)",
     "author": "T1nk-R (GusJ)",
-    "version": (2, 1, 0),
+    "version": (1, 0, 0),
     "blender": (3, 6, 0),
     "location": "Outliner > Context menu, Outliner > Context menu of objects and meshes",
     "description": "Synchronize mesh names with parent object names",
