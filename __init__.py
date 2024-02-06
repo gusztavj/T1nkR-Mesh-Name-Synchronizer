@@ -134,10 +134,6 @@ def register():
     for location in menuLocations:
         location.append(menuItem)
     
-    # bpy.types.OUTLINER_MT_context_menu.append(menuItem)
-    # bpy.types.OUTLINER_MT_object.append(menuItem)
-    # bpy.types.OUTLINER_MT_edit_datablocks.append(menuItem)
-
     # Configure hotkey
     #
     

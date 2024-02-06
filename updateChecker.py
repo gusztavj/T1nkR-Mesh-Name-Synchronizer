@@ -154,6 +154,13 @@ class T1NKER_OT_MeshNameSynchronizerUpdateChecker(Operator):
     bl_options = {'REGISTER', 'UNDO'}    
     bl_category = "T1nk-R Utils"
 
+    # Other properties ------------------------------------------------------------------------------------------------------------
+    forceUpdateCheck = BoolProperty(default = False)
+    """
+    Whether to force update check. Use only for testing. Once the operator is called,
+    this is set back to False to prevent accidental flooding of GitHub.
+    """
+
     # Public functions ============================================================================================================
     
     # Perform the operation -------------------------------------------------------------------------------------------------------
@@ -173,17 +180,20 @@ class T1NKER_OT_MeshNameSynchronizerUpdateChecker(Operator):
                 
         updateInfo = context.preferences.addons[__package__].preferences.updateInfo
         
-        # Check if update check shall be performed based on frequency
-        try:                        
-            lastCheckDate = datetime.strptime(updateInfo.lastCheckedTimestamp, '%Y-%m-%d %H:%M:%S')
-            delta = datetime.now() - lastCheckDate
-            if delta.days < updateInfo.checkFrequencyDays: # Successfully checked for updates in the last checkFrequencyDays number of days
-                # Do not flood the repo API, use cached info
-                return
-        except: # For example, lastCheck is None as no update check was ever performed yet
-            # Could not determine when last update check was performed, do nothing (check it now)
-            pass
-                
+        # Check cache expiry only if update check is not forced
+        if not self.forceUpdateCheck:                    
+            # Check if update check shall be performed based on frequency
+            try:                        
+                lastCheckDate = datetime.strptime(updateInfo.lastCheckedTimestamp, '%Y-%m-%d %H:%M:%S')
+                delta = datetime.now() - lastCheckDate
+                if delta.days < updateInfo.checkFrequencyDays: # Successfully checked for updates in the last checkFrequencyDays number of days
+                    # Do not flood the repo API, use cached info
+                    return
+            except: # For example, lastCheck is None as no update check was ever performed yet
+                # Could not determine when last update check was performed, do nothing (check it now)
+                pass
+        else: # turn forcing check off to prevent accidental flooding                
+            self.forceUpdateCheck = False
         
         try: # if anything goes wrong we silently fail, no need to perform double-checks
             response = requests.get(RepoInfo.repoReleaseApiUrl, timeout=5, auth=(RepoInfo.username, RepoInfo.token))            
