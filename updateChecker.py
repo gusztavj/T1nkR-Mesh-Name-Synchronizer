@@ -82,7 +82,7 @@ class RepoInfo:
     username = "gusztavj"
     """My username for API access"""
     
-    token = "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"
+    token = "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"
     """A token restricted only to read code from Blender add-on repos (public anyway)"""
     
 # Structured update info ##########################################################################################################
@@ -142,7 +142,7 @@ class T1nkerMeshNameSynchronizerUpdateInfo(PropertyGroup):
 # Operator for checking updates ###################################################################################################
 class T1NKER_OT_MeshNameSynchronizerUpdateChecker(Operator):    
     """
-    Synchronize mesh names with parent object names
+    Checks for updates
     """
     
     # Properties ==================================================================================================================
