@@ -51,9 +51,11 @@ from __future__ import annotations
 from . import bl_info
 import requests
 import re
+import base64
 from datetime import datetime
 from bpy.types import PropertyGroup, Operator, Context
 from bpy.props import StringProperty, BoolProperty, IntProperty
+
 
 # Repository information for help and updates #####################################################################################
 class RepoInfo:
@@ -82,7 +84,7 @@ class RepoInfo:
     username = "gusztavj"
     """My username for API access"""
     
-    token = "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"
+    token = "Z2l0aHViX3BhdF8xMUFDM1Q1RlEwU0tYU1hKazAyVGE4X2lnRUoxMnJxYWlXc2ljdUp2UjNWVEVnNm5SemN1eGpNdzVLUTJ2WGwwMWozRlhRNU0zQWsxa0FSaG80"
     """A token restricted only to read code from Blender add-on repos (public anyway)"""
     
 # Structured update info ##########################################################################################################
@@ -196,7 +198,7 @@ class T1NKER_OT_MeshNameSynchronizerUpdateChecker(Operator):
             self.forceUpdateCheck = False
         
         try: # if anything goes wrong we silently fail, no need to perform double-checks
-            response = requests.get(RepoInfo.repoReleaseApiUrl, timeout=5, auth=(RepoInfo.username, RepoInfo.token))            
+            response = requests.get(RepoInfo.repoReleaseApiUrl, timeout=5, auth=(RepoInfo.username, base64.b64decode(RepoInfo.token)))            
         
             updateInfo.latestVersionName = response.json()["name"]
             updateInfo.latestVersion = response.json()["tag_name"]

@@ -358,7 +358,7 @@ class T1NKER_OT_MeshNameSynchronizer(Operator):
         # Call the update checker to check for updates time to time, as specified in 
         # `updateInfo.T1nkerMeshNameSynchronizerUpdateInfo.checkFrequencyDays`
         try:
-            bpy.ops.t1nker.meshnamesynchronizerupdatechecker()            
+            bpy.ops.t1nker.meshnamesynchronizerupdatechecker(forceUpdateCheck = True)            
         except:
             # Don't mess up anything if update checking doesn't work, just ignore the error
             pass
