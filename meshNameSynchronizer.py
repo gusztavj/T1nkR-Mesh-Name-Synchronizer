@@ -64,7 +64,7 @@ class T1nkerMeshNameSynchronizerSettings(PropertyGroup):
     prefix: StringProperty(
         name="Mesh name prefix", 
         description="Prefix to prepend to mesh names"
-    )
+    ) # type: ignore
     """
     A prefix for the mesh name. This is appended before the parent object's name. Leave empty to not add anything.
     """
@@ -72,7 +72,7 @@ class T1nkerMeshNameSynchronizerSettings(PropertyGroup):
     suffix: StringProperty(
         name="Mesh name suffix", 
         description="Suffix to append to mesh names"
-    )
+    ) # type: ignore
     """
     A suffix for the mesh name. This is appended after the parent object's name. Leave empty to not add anything.
     """
@@ -81,7 +81,7 @@ class T1nkerMeshNameSynchronizerSettings(PropertyGroup):
         name="Apply only to meshes, leave others",
         description="Check to sync only mesh names, clear to include cameras, lights etc.",
         default=False
-    )
+    ) # type: ignore
     """
     If `True`, only meshes of objects of the mesh type will be processed, otherwise data blocks of everything,
     such as cameras and lights.
@@ -91,7 +91,7 @@ class T1nkerMeshNameSynchronizerSettings(PropertyGroup):
         name="Verbose mode",
         description="Check to get a detailed log on what happened and what not. Non-verbose mode only reports what actually happened.",
         default=False
-    )
+    ) # type: ignore
     """
     Controls log verbosity.
     """
@@ -100,7 +100,7 @@ class T1nkerMeshNameSynchronizerSettings(PropertyGroup):
         name="Just a test", 
         description="Don't do anything, just show what you would do",
         default=False
-    )    
+    ) # type: ignore    
     """
     Controls if actions are actually taken or just simulated.
     """
@@ -109,7 +109,7 @@ class T1nkerMeshNameSynchronizerSettings(PropertyGroup):
         name="Already initialized", 
         description="",
         default=False
-    )    
+    ) # type: ignore   
     """
     This is not intended for the UI. This stores whether the add-on has been initialized for the scene or not, to get
     default values set in add-on preferences.
@@ -130,12 +130,12 @@ class T1nkerMeshNameSynchronizerAddonPreferences(AddonPreferences):
     """
     
     # Other properties ============================================================================================================
-    settings: PointerProperty(type=T1nkerMeshNameSynchronizerSettings)
+    settings: PointerProperty(type=T1nkerMeshNameSynchronizerSettings) # type: ignore
     """
     The default settings stored at add-on level (insted of scene level).
     """
     
-    updateInfo: PointerProperty(type=updateChecker.T1nkerMeshNameSynchronizerUpdateInfo)
+    updateInfo: PointerProperty(type=updateChecker.T1nkerMeshNameSynchronizerUpdateInfo) # type: ignore
     """
     Information about the current version and the latest available
     """
@@ -171,10 +171,10 @@ class T1nkerMeshNameSynchronizerAddonPreferences(AddonPreferences):
                 # Draw update button and tip
                 opUpdate = layout.column().row().operator(
                         'wm.url_open',
-                        text=f"Update available",
+                        text="Update available",
                         icon='URL'
                         )            
-                opUpdate.url = updateChecker.RepoInfo.repoReleasesUrl
+                opUpdate.url = updateChecker.UpdateCheckingInfo.repoReleasesUrl()
                 layout.row().label(text=f"You can update from {updateInfo.currentVersion} to {updateInfo.latestVersion}")
         except:
             # Do nothing, if we could not check updates, probably this is the first time of enabling the add-on
@@ -231,7 +231,7 @@ class T1NKER_OT_MeshNameSynchronizer(Operator):
         return True
 
     # Draw operator to show export settings during invoke =========================================================================
-    def draw(self, context):        
+    def draw(self, context):          # sourcery skip: extract-duplicate-method
         """
         Draw the UI.
 
@@ -289,7 +289,7 @@ class T1NKER_OT_MeshNameSynchronizer(Operator):
             text='Help',
             icon='URL'
             )
-        opHelp.url = updateChecker.RepoInfo.repoUrl       
+        opHelp.url = updateChecker.UpdateCheckingInfo.repoUrl()       
         
         # Update available button
         #
@@ -304,10 +304,10 @@ class T1NKER_OT_MeshNameSynchronizer(Operator):
                 # Update button            
                 opUpdate = buttonRow.column().row().operator(
                         'wm.url_open',
-                        text=f"Update available",
+                        text="Update available",
                         icon='URL'
                         )            
-                opUpdate.url = updateChecker.RepoInfo.repoReleasesUrl
+                opUpdate.url = updateChecker.UpdateCheckingInfo.repoReleasesUrl()
                 box.row().label(text=f"You can update from {updateInfo.currentVersion} to {updateInfo.latestVersion}")
         except:
             # Fail silently if we cannot check for updates or draw the UI
@@ -317,6 +317,7 @@ class T1NKER_OT_MeshNameSynchronizer(Operator):
 
     # Show the UI -----------------------------------------------------------------------------------------------------------------
     def invoke(self, context, event):                
+        # sourcery skip: inline-immediately-returned-variable
         """
         React to invocation by showing the properties dialog.
 
@@ -345,6 +346,7 @@ class T1NKER_OT_MeshNameSynchronizer(Operator):
 
     # Perform the operation -------------------------------------------------------------------------------------------------------
     def execute(self, context):              
+        # sourcery skip: extract-method, hoist-similar-statement-from-if, merge-else-if-into-elif, remove-redundant-fstring, swap-nested-ifs
         """
         Execute the operation
 
@@ -365,7 +367,7 @@ class T1NKER_OT_MeshNameSynchronizer(Operator):
         
         operationStarted = f"{datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')}"
         
-        status = None
+        status = {}
         meshesRenamed = 0
         numberOfObjects = 0
         

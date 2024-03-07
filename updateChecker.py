@@ -50,42 +50,81 @@
 from __future__ import annotations
 from . import bl_info
 import requests
-import re
-import base64
-from datetime import datetime
+import json
+import contextlib
+from datetime import datetime, timedelta
 from bpy.types import PropertyGroup, Operator, Context
 from bpy.props import StringProperty, BoolProperty, IntProperty
 
 
 # Repository information for help and updates #####################################################################################
-class RepoInfo:
+class UpdateCheckingInfo:
     """
-    Information to access the repository for update checking and help access.
+    Information to access the GitHub Update Checker service
     """
+        
+    _repoSlug = "T1nkR-Mesh-Name-Synchronizer"
+    """Slug for the repository"""
+        
     
-    _repoBase = "https://github.com/gusztavj/"
+    _repoBase = "https://github.com/gusztavj"
     """Base address of my repositories"""
     
-    _repoApiBase = "https://api.github.com/repos/gusztavj/"
-    """Base address of my repositories for API calls"""
-    
-    _repoSlug = "T1nkR-Mesh-Name-Synchronizer/"
-    """Slug for the repository"""
+    _repoApiBase = "https://api.github.com/repos/gusztavj"
+    """Base address of my repositories for API calls"""        
 
-    repoUrl = _repoBase + _repoSlug
-    """URL of the repository"""
+    @staticmethod
+    def _stripSlashes(uriSegment) -> str:
+        """Strips leading and trailing slashes"""
+        return uriSegment.lstrip("/").rstrip("/")
     
-    repoReleasesUrl = _repoBase + _repoSlug + "releases"
-    """URL of the releases page of the repository"""
+    @staticmethod
+    def _combineUri(*args: str) -> str:        
+        """Combines strings into an URI by stripping all leading and trailing slashes beforehand"""
+        return "/".join( f"{UpdateCheckingInfo._stripSlashes(segment)}" for segment in args )
+        
+
+    @staticmethod
+    def repoUrl() -> str:
+        """URL of the repository"""
+        return UpdateCheckingInfo._combineUri(UpdateCheckingInfo._repoBase, UpdateCheckingInfo._repoSlug)
     
-    repoReleaseApiUrl = _repoApiBase + _repoSlug + "releases/latest"
-    """API URL to get latest release information"""
+    def repoReleasesUrl() -> str:
+        """URL of the releases page of the repository"""
+        return UpdateCheckingInfo._combineUri(UpdateCheckingInfo._repoBase, UpdateCheckingInfo._repoSlug, "releases")
     
-    username = "gusztavj"
-    """My username for API access"""
+    def repoReleaseApiUrl() -> str:
+        """API URL to get latest release information"""
+        return UpdateCheckingInfo._combineUri(UpdateCheckingInfo._repoApiBase, UpdateCheckingInfo._repoSlug, "releases", "latest")
     
-    token = "Z2l0aHViX3BhdF8xMUFDM1Q1RlEwU0tYU1hKazAyVGE4X2lnRUoxMnJxYWlXc2ljdUp2UjNWVEVnNm5SemN1eGpNdzVLUTJ2WGwwMWozRlhRNU0zQWsxa0FSaG80"
-    """A token restricted only to read code from Blender add-on repos (public anyway)"""
+    currentVersion: str = ""
+    """Version number of the current version running in `x.y.z` format"""
+    
+    forceUpdateCheck: bool = False
+    
+    @staticmethod
+    def getUpdateCheckingServiceUrl() -> str:
+        """URL to the service endpoint of tge GitHub Update Checker service"""
+        
+        # Production URL
+        return "https://apps.imprestige.biz/gitHubUpdateChecker/getUpdateInfo"
+        
+        # Test URL
+        #return "http://localhost:5000/getUpdateInfo"
+    
+    
+    @staticmethod
+    def getRequestBody():
+        return {
+                "appInfo": 
+                    {
+                        "repoSlug": UpdateCheckingInfo._repoSlug,
+                        "currentVersion": UpdateCheckingInfo.currentVersion
+                    },
+                    "forceUpdateCheck": UpdateCheckingInfo.forceUpdateCheck
+            }
+        
+            
     
 # Structured update info ##########################################################################################################
 class T1nkerMeshNameSynchronizerUpdateInfo(PropertyGroup):
@@ -95,8 +134,8 @@ class T1nkerMeshNameSynchronizerUpdateInfo(PropertyGroup):
     
     checkFrequencyDays: IntProperty(
         name="Update check frequency (days)",
-        default=3
-    )
+        default=1
+    ) # type: ignore
     """
     Frequency of checking for new updates (days).
     """
@@ -104,7 +143,7 @@ class T1nkerMeshNameSynchronizerUpdateInfo(PropertyGroup):
     updateAvailable: BoolProperty(
         name="Is update available",
         default=False
-    )
+    ) # type: ignore
     """
     Tells whether an update is available (`True`).
     """
@@ -112,7 +151,7 @@ class T1nkerMeshNameSynchronizerUpdateInfo(PropertyGroup):
     currentVersion: StringProperty(
         name="Installed version",
         default=""
-    )
+    ) # type: ignore
     """
     Version number of the current version running in x.y.z format.
     """
@@ -120,7 +159,7 @@ class T1nkerMeshNameSynchronizerUpdateInfo(PropertyGroup):
     latestVersion: StringProperty(
         name="Latest available version",
         default=""
-    )
+    ) # type: ignore
     """
     Version number of the latest release (the release tag from the repo).
     """
@@ -128,7 +167,7 @@ class T1nkerMeshNameSynchronizerUpdateInfo(PropertyGroup):
     latestVersionName: StringProperty(
         name="Name of latest version",
         default=""
-    )
+    ) # type: ignore
     """
     Name of the latest release.
     """
@@ -136,7 +175,7 @@ class T1nkerMeshNameSynchronizerUpdateInfo(PropertyGroup):
     lastCheckedTimestamp: StringProperty(
         name="When last successful check for updates happened",
         default=""
-    )
+    ) # type: ignore
     """
     Date and time of last successful check for updates.
     """
@@ -157,7 +196,7 @@ class T1NKER_OT_MeshNameSynchronizerUpdateChecker(Operator):
     bl_category = "T1nk-R Utils"
 
     # Other properties ------------------------------------------------------------------------------------------------------------
-    forceUpdateCheck: BoolProperty(default = False)
+    forceUpdateCheck: BoolProperty(default = False) # type: ignore
     """
     Whether to force update check. Use only for testing. Once the operator is called,
     this is set back to False to prevent accidental flooding of GitHub.
@@ -166,7 +205,7 @@ class T1NKER_OT_MeshNameSynchronizerUpdateChecker(Operator):
     # Public functions ============================================================================================================
     
     # Perform the operation -------------------------------------------------------------------------------------------------------
-    def execute(self, context: Context):
+    def execute(self, context: Context):  # sourcery skip: extract-method
         """
         Performs update check for the add-on and caches results. The cache expires in some days as specified in
         `updateInfo.T1nkerMeshNameSynchronizerUpdateInfo.checkFrequencyDays`, and then new check is performed. Until that the
@@ -181,58 +220,58 @@ class T1NKER_OT_MeshNameSynchronizerUpdateChecker(Operator):
         """
                 
         updateInfo = context.preferences.addons[__package__].preferences.updateInfo
-        
+
         # Check cache expiry only if update check is not forced
-        if not self.forceUpdateCheck:                    
+        if not self.forceUpdateCheck:            
             # Check if update check shall be performed based on frequency
-            try:                        
+            with contextlib.suppress(Exception):
                 lastCheckDate = datetime.strptime(updateInfo.lastCheckedTimestamp, '%Y-%m-%d %H:%M:%S')
                 delta = datetime.now() - lastCheckDate
                 if delta.days < updateInfo.checkFrequencyDays: # Successfully checked for updates in the last checkFrequencyDays number of days
                     # Do not flood the repo API, use cached info
                     return
-            except: # For example, lastCheck is None as no update check was ever performed yet
-                # Could not determine when last update check was performed, do nothing (check it now)
-                pass
         else: # turn forcing check off to prevent accidental flooding                
             self.forceUpdateCheck = False
-        
+
         try: # if anything goes wrong we silently fail, no need to perform double-checks
-            response = requests.get(RepoInfo.repoReleaseApiUrl, timeout=5, auth=(RepoInfo.username, base64.b64decode(RepoInfo.token)))            
-        
-            updateInfo.latestVersionName = response.json()["name"]
-            updateInfo.latestVersion = response.json()["tag_name"]
-            
-            # Trim leading v and eventual trailing qualifiers such as -alpha
-            latestVersionCleaned = re.match("[v]((\d+\.)*(\d+)).*", updateInfo.latestVersion)[1]
-            
-            # Parse into a list
-            latestVersionTags = [int(t) for t in latestVersionCleaned.split(".")]
+            print(f"{__package__}: Trying to check for updates")
             
             # Get installed version (already stored as a list by Blender)
+
             installedVersionTags = bl_info["version"]
             updateInfo.currentVersion = ".".join([str(i) for i in installedVersionTags])
-            
-            updateInfo.updateAvailable = False
-            
-            if latestVersionTags[0] > installedVersionTags[0]:
-                updateInfo.updateAvailable = True
-            else:
-                if latestVersionTags[1] > installedVersionTags[1]:
-                    updateInfo.updateAvailable = True
-                else:
-                    if len(installedVersionTags) > 2 and latestVersionTags[2] > installedVersionTags[2]:
-                        updateInfo.updateAvailable = True
-                        
+
+            UpdateCheckingInfo._repoSlug = "T1nkR-Mesh-Name-Synchronizer"
+            UpdateCheckingInfo.currentVersion = updateInfo.currentVersion
+            headers = {'Content-Type': 'application/json'}
+            payload = UpdateCheckingInfo.getRequestBody()
+            response = requests.post(UpdateCheckingInfo.getUpdateCheckingServiceUrl(), headers=headers, json=payload, timeout=5)
+
+            # For errors, enable raising exceptions
+            if response.status_code != 200:
+                response.raise_for_status()
+
+            # Being here means a response has been received successfully
+
+            repoInfo = response.json()["repository"]
+
+            updateInfo.latestVersionName = repoInfo["latestVersionName"]
+            updateInfo.latestVersion = repoInfo["latestVersion"]                        
+            updateInfo.releaseUrl = repoInfo["latestVersion"]
+            updateInfo.repoUrl = repoInfo["repoUrl"]
+            updateInfo.updateAvailable = response.json()["updateAvailable"]
+
             # Save timestamp
             updateInfo.lastCheckedTimestamp = f"{datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')}"
             
+            print(f"{__package__}: Checking for updates completed, there is {'a' if updateInfo.updateAvailable else 'no' } new version available")
+
         except requests.exceptions.Timeout as tex:
             # Timeout, let's not bother the user
-            print("Version checking timed out")
+            print(f"{__package__}: Version checking timed out")
             updateInfo.updateAvailable = False
         except Exception as ex: 
-            print(f"Error during version check: {ex}")
+            print(f"{__package__}: Error during version check: {ex}")
             updateInfo.updateAvailable = False
-                
+
         return {'FINISHED'}

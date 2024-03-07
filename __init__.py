@@ -50,7 +50,7 @@
 bl_info = {
     "name": "T1nk-R Mesh Name Synchronizer (T1nk-R Utilities)",
     "author": "T1nk-R (GusJ)",
-    "version": (1, 0, 3),
+    "version": (1, 1, 0),
     "blender": (3, 6, 0),
     "location": "Outliner > Context menu, Outliner > Context menu of objects and meshes",
     "description": "Synchronize mesh names with parent object names",
@@ -63,8 +63,11 @@ bl_info = {
 # Reload the main module to make sure it's up to date
 if "bpy" in locals():
     from importlib import reload
-    reload(meshNameSynchronizer)
+        
+    # Mind the order as updateChecker is a dependency of meshNameSynchronizer
     reload(updateChecker)
+    reload(meshNameSynchronizer)
+    
     del reload
 
 import bpy
